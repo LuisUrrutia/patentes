@@ -71,6 +71,30 @@ def ppeticion(rut):
     return datos
 
 
+def multas(patente):
+    url = "http://consultamultas.srcei.cl/ConsultaMultas/buscarConsultaMultasExterna.do?ppu=%s" % patente
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text, 'html.parser')
+    datos = []
+    cantidad_multas = 0
+    # La primera tabla contiene multas para el permiso de circulacion 2015
+    # La segunda tabla las multas registradas
+    for tabla in soup.find_all('table', { "class" : "grilla" }):
+        temp = []
+        cantidad_multas = 0
+        for td in tabla.find_all('td'):
+            cantidad_multas += 1
+            if cantidad_multas % 2 == 0:
+                rol = td.string
+                temp.append({"juzgado": juzgado, "rol": rol})
+            else:
+                juzgado = td.string
+        datos.append(temp)
+    cantidad_multas = int(round(cantidad_multas/2))
+
+    return {"cantidad": cantidad_multas, "multas": datos}
+
+
 def tabular(data):
     for l in data:
         if len(l) > 1:
@@ -104,6 +128,8 @@ def datosPatente(patentex):
     pv = peticion(opt['rut_extra'], rutraw)
     px = ppeticion(rutraw)
 
+    m = multas(patentex)
+
     data = [
         [ "Datos del dueño" ],
         [ u'Dueño', pe['Name'] ],
@@ -123,8 +149,26 @@ def datosPatente(patentex):
         [ u'Año', p['Year'] ],
         [ 'Color', p['Color'] ],
         [ u'N° Motor', p['Motor'] ],
-        [ 'Chasis', p['Chasis'] ]
+        [ 'Chasis', p['Chasis'] ],
+        [ 'Multas', m['cantidad'] ],
+        [ "Detalle de multas" ]
     ]
+
+    contador = 1
+
+    # HARDCODE: Queremos la segunda tabla solamente, de multas
+    if len(m['multas']) > 1:
+        multa = m['multas'][1]
+    else:
+        multa = m['multas'][0]
+
+    for mu in multa:
+        txt1 = "Juzagado %s" % contador
+        txt2 = "Rol/Causa %s" % contador
+        data.append([txt1, mu["juzgado"]])
+        data.append([txt2, mu["rol"]])
+        contador += 1
+
     tabular(data)
 
 
