@@ -15,5 +15,7 @@ Obtención de datos a través de patente
 - Obtener el Código Fuente (Vía Clone o Fork)
 - Ejecutar!
   ```
-  python prueba.py
+  # Es posible escribir la patente con los siguientes formatos:
+  # FCBK24, FCBK-24, DA1231, DA-1231
+  python prueba.py 'patente'
   ```
