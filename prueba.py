@@ -3,6 +3,8 @@
 
 import requests
 import json
+import sys
+import re
 from bs4 import BeautifulSoup
 
 url_base = 'http://v26.multidata.cl/warpit/json'
@@ -110,66 +112,83 @@ def tabular(data):
 
 
 def datosPatente(patentex):
-    patente = peticion(opt['patente2'], patentex)
-    persona = peticion(opt['patente'], patentex)
 
-    if type(patente) is list:
-        p = patente[0]
-    else:
-        p = patente
+    try:
+        # Eliminar Guión o cualquier caracter no alfanumérico
+        patentex = re.sub('[^0-9a-zA-Z]+', '', patentex)
 
-    pe = persona['0']
-    rut = pe['Person']
-    dv = digito_verificador(rut)
-
-    rutraw = rut+dv
-    rut2 = rut+'-'+dv
-
-    pv = peticion(opt['rut_extra'], rutraw)
-    px = ppeticion(rutraw)
-
-    m = multas(patentex)
-
-    data = [
-        [ "Datos del dueño" ],
-        [ u'Dueño', pe['Name'] ],
-        [ 'RUT', rut2 ],
-        [ 'Nacionalidad', pv['chilena']['src'] ],
-        [ 'Sexo', px['sexo'] ],
-        [ u'País', px['pais'] ],
-        [ u'Región', px['region'] ],
-        [ u'Provincia', px['provincia'] ],
-        [ 'Comuna', px['comuna'] ],
-        [ u'Dirección', px['direccion'] ],
-        [ "Datos del vehiculo" ],
-        [ 'Patente', p['Plate'] ],
-        [ 'Tipo', p['Class'] ],
-        [ 'Marca', p['Maker'] ],
-        [ 'Modelo', p['Model'] ],
-        [ u'Año', p['Year'] ],
-        [ 'Color', p['Color'] ],
-        [ u'N° Motor', p['Motor'] ],
-        [ 'Chasis', p['Chasis'] ],
-        [ 'Multas', m['cantidad'] ],
-        [ "Detalle de multas" ]
-    ]
-
-    contador = 1
-
-    # HARDCODE: Queremos la segunda tabla solamente, de multas
-    if len(m['multas']) > 1:
-        multa = m['multas'][1]
-    else:
-        multa = m['multas'][0]
-
-    for mu in multa:
-        txt1 = "Juzagado %s" % contador
-        txt2 = "Rol/Causa %s" % contador
-        data.append([txt1, mu["juzgado"]])
-        data.append([txt2, mu["rol"]])
-        contador += 1
-
-    tabular(data)
+        # Chequear Largo
+        if len(patentex) > 6:
+            raise Exception('Patente Inválida.')
 
 
-datosPatente('fcbk24')
+        if re.search("([a-zA-Z]{2})([\d]{4})|([a-zA-Z]{4})([\d]{2})", patentex) is None:
+            raise Exception('Patente Inválida.')
+
+        patente = peticion(opt['patente2'], patentex)
+        persona = peticion(opt['patente'], patentex)
+
+        if type(patente) is list:
+            p = patente[0]
+        else:
+            p = patente
+
+        pe = persona['0']
+        rut = pe['Person']
+        dv = digito_verificador(rut)
+
+        rutraw = rut+dv
+        rut2 = rut+'-'+dv
+
+        pv = peticion(opt['rut_extra'], rutraw)
+        px = ppeticion(rutraw)
+
+        m = multas(patentex)
+
+        data = [
+            [ "Datos del dueño" ],
+            [ u'Dueño', pe['Name'] ],
+            [ 'RUT', rut2 ],
+            [ 'Nacionalidad', pv['chilena']['src'] ],
+            [ 'Sexo', px['sexo'] ],
+            [ u'País', px['pais'] ],
+            [ u'Región', px['region'] ],
+            [ u'Provincia', px['provincia'] ],
+            [ 'Comuna', px['comuna'] ],
+            [ u'Dirección', px['direccion'] ],
+            [ "Datos del vehiculo" ],
+            [ 'Patente', p['Plate'] ],
+            [ 'Tipo', p['Class'] ],
+            [ 'Marca', p['Maker'] ],
+            [ 'Modelo', p['Model'] ],
+            [ u'Año', p['Year'] ],
+            [ 'Color', p['Color'] ],
+            [ u'N° Motor', p['Motor'] ],
+            [ 'Chasis', p['Chasis'] ],
+            [ 'Multas', m['cantidad'] ],
+            [ "Detalle de multas" ]
+        ]
+
+        contador = 1
+
+        # HARDCODE: Queremos la segunda tabla solamente, de multas
+        if len(m['multas']) > 1:
+            multa = m['multas'][1]
+        else:
+            multa = m['multas'][0]
+
+        for mu in multa:
+            txt1 = "Juzagado %s" % contador
+            txt2 = "Rol/Causa %s" % contador
+            data.append([txt1, mu["juzgado"]])
+            data.append([txt2, mu["rol"]])
+            contador += 1
+
+        tabular(data)
+    except Exception as e:
+        print "Error! {0}".format(e)
+
+if len(sys.argv) > 1:
+    datosPatente(sys.argv[1])
+else:
+    print "Error! Es necesario ingresar patente"
